@@ -1,0 +1,15 @@
+bin/
+obj/
+node_modules/
+dist/
+.vs/
+*.user
+.env
+.env.local
+appsettings.Local.json
+secrets.json
+appsettings.Development.json
+*.mdf
+*.ldf
+*.db
+*.sqlite
