@@ -1,3 +1,6 @@
+using Npgsql;
+using Microsoft.EntityFrameworkCore.Storage;
+
 namespace MiniERP.Api.Services;
 
 public interface ICurrentUser { string UserName { get; } int? UserId { get; } }
@@ -45,15 +48,43 @@ public class NumberingService(ErpDbContext db)
 {
     public async Task<string> Next(string prefix)
     {
-        for (var attempt = 0; attempt < 6; attempt++)
+        await db.Database.OpenConnectionAsync();
+
+        try
         {
-            var seq = await db.DocumentSequences.FirstOrDefaultAsync(s => s.Prefix == prefix);
-            if (seq == null) { seq = new DocumentSequence { Prefix = prefix }; db.DocumentSequences.Add(seq); }
-            seq.LastNumber++;
-            try { await db.SaveChangesAsync(); return $"{prefix}-{DateTime.UtcNow:yyyy}-{seq.LastNumber:D5}"; }
-            catch (DbUpdateConcurrencyException ex) { foreach (var e in ex.Entries) await e.ReloadAsync(); }
+            var connection = (NpgsqlConnection)db.Database.GetDbConnection();
+
+            await using var command = new NpgsqlCommand(
+                """
+                INSERT INTO "DocumentSequences" ("Prefix", "LastNumber")
+                VALUES (@prefix, 1)
+                ON CONFLICT ("Prefix")
+                DO UPDATE SET
+                    "LastNumber" = "DocumentSequences"."LastNumber" + 1
+                RETURNING "LastNumber";
+                """,
+                connection);
+
+            command.Parameters.AddWithValue("prefix", prefix);
+
+            var currentTransaction = db.Database.CurrentTransaction;
+
+            if (currentTransaction != null)
+            {
+                command.Transaction =
+                    (NpgsqlTransaction)currentTransaction.GetDbTransaction();
+            }
+
+            var result = await command.ExecuteScalarAsync();
+
+            var nextNumber = Convert.ToInt32(result);
+
+            return $"{prefix}-{DateTime.UtcNow:yyyy}-{nextNumber:D5}";
         }
-        throw new BusinessException("Could not allocate a document number; please retry.", 409);
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
     }
 }
 

@@ -11,7 +11,7 @@ public abstract class DocEntity : BaseEntity
     [MaxLength(30)] public string Status { get; set; } = St.Draft;
     [MaxLength(1000)] public string? Notes { get; set; }
     [MaxLength(100)] public string? CreatedBy { get; set; }
-    public byte[]? RowVersion { get; set; }
+    public uint RowVersion { get; set; }
 }
 public abstract class PricedDoc : DocEntity { public decimal Subtotal { get; set; } public decimal TaxAmount { get; set; } public decimal Total { get; set; } }
 public abstract class ItemBase
@@ -177,5 +177,15 @@ public class Income : DocEntity { public int AccountId { get; set; } public Acco
 // ---------- System ----------
 public class AuditLog { public int Id { get; set; } public DateTime Timestamp { get; set; } = DateTime.UtcNow; [MaxLength(100)] public string? UserName { get; set; } [MaxLength(20)] public string Action { get; set; } = ""; [MaxLength(80)] public string EntityName { get; set; } = ""; public int EntityId { get; set; } public string? Details { get; set; } }
 public class Notification { public int Id { get; set; } public string Message { get; set; } = ""; [MaxLength(30)] public string Type { get; set; } = "Info"; [MaxLength(80)] public string? Key { get; set; } public string? Link { get; set; } public bool IsRead { get; set; } public DateTime CreatedAt { get; set; } = DateTime.UtcNow; }
-public class DocumentSequence { public int Id { get; set; } [MaxLength(10)] public string Prefix { get; set; } = ""; public int LastNumber { get; set; } public byte[]? RowVersion { get; set; } }
+public class DocumentSequence
+{
+    public int Id { get; set; }
+
+    [MaxLength(10)]
+    public string Prefix { get; set; } = "";
+
+    public int LastNumber { get; set; }
+
+    public uint RowVersion { get; set; }
+}
 public class Setting : BaseEntity { [MaxLength(80)] public string Key { get; set; } = ""; public string? Value { get; set; } }
