@@ -145,7 +145,8 @@ public class ReportService(ErpDbContext db, AccountingService acct)
     }
     public async Task<List<object>> RevenueVsExpenses()
     {
-        var months = Months(); var start = new DateTime(months[0].Y, months[0].M, 1);
+        var months = Months();
+var start = new DateTime(months[0].Y, months[0].M, 1, 0, 0, 0, DateTimeKind.Utc);
         var lines = await db.JournalEntryLines.Where(l => l.JournalEntry!.Status == St.Posted && l.JournalEntry.Date >= start && (l.Account!.AccountType == AccountTypes.Revenue || l.Account.AccountType == AccountTypes.Expense))
             .Select(l => new { l.JournalEntry!.Date, Type = l.Account!.AccountType, l.Debit, l.Credit }).ToListAsync();
         return months.Select(m => (object)new
