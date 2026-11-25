@@ -1,7 +1,25 @@
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MiniERP.Api.Data;
+
+
+public sealed class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
+{
+    public UtcDateTimeConverter()
+        : base(
+            value => value.Kind == DateTimeKind.Utc
+                ? value
+                : value.Kind == DateTimeKind.Local
+                    ? value.ToUniversalTime()
+                    : DateTime.SpecifyKind(value, DateTimeKind.Utc),
+
+            value => DateTime.SpecifyKind(value, DateTimeKind.Utc))
+    {
+    }
+}
+
 
 public class ErpDbContext(DbContextOptions<ErpDbContext> options, ICurrentUser currentUser) : DbContext(options)
 {
@@ -57,7 +75,13 @@ public class ErpDbContext(DbContextOptions<ErpDbContext> options, ICurrentUser c
     public DbSet<DocumentSequence> DocumentSequences => Set<DocumentSequence>();
     public DbSet<Setting> Settings => Set<Setting>();
 
-    protected override void ConfigureConventions(ModelConfigurationBuilder cb) => cb.Properties<decimal>().HavePrecision(18, 4);
+    protected override void ConfigureConventions(ModelConfigurationBuilder cb)
+{
+    cb.Properties<decimal>().HavePrecision(18, 4);
+
+    // Normalize all DateTime properties and their query parameters to UTC.
+    cb.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+}
 
     protected override void OnModelCreating(ModelBuilder b)
     {
