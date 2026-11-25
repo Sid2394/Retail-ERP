@@ -183,7 +183,16 @@ public class DashboardService(ErpDbContext db, ReportService reports, Accounting
 {
     public async Task<object> Get()
     {
-        var months = ReportService.Months(); var start = new DateTime(months[0].Y, months[0].M, 1);
+        var months = ReportService.Months();
+var start = new DateTime(
+    months[0].Y,
+    months[0].M,
+    1,
+    0,
+    0,
+    0,
+    DateTimeKind.Utc
+);
         var products = await db.Products.Include(p => p.Category).ToListAsync();
         var balances = await db.StockBalances.Include(b => b.Product).ThenInclude(p => p!.Category).ToListAsync();
         var onHand = balances.GroupBy(b => b.ProductId).ToDictionary(g => g.Key, g => g.Sum(b => b.Quantity));
