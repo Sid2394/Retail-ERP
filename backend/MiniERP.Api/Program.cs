@@ -9,7 +9,12 @@ var jwtKey = cfg["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
     throw new InvalidOperationException("Jwt:Key is not configured (min. 32 characters). Set it with 'dotnet user-secrets set \"Jwt:Key\" \"<random>\"' or the Jwt__Key environment variable. See README.");
 
-builder.Services.AddDbContext<ErpDbContext>(o => o.UseSqlServer(cfg.GetConnectionString("DefaultConnection")));
+var connectionString = cfg.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("Database connection string is not configured.");
+
+builder.Services.AddDbContext<ErpDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddScoped<NumberingService>();

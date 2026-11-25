@@ -79,11 +79,19 @@ public class ErpDbContext(DbContextOptions<ErpDbContext> options, ICurrentUser c
         b.Entity<DocumentSequence>().HasIndex(x => x.Prefix).IsUnique();
         b.Entity<Setting>().HasIndex(x => x.Key).IsUnique();
         b.Entity<AuditLog>().HasIndex(x => x.Timestamp);
-        // Duplicate-posting guards (SQL Server filtered unique indexes)
-        b.Entity<JournalEntry>().HasIndex(x => x.ReferenceKey).IsUnique().HasFilter("[ReferenceKey] IS NOT NULL");
-        b.Entity<Payment>().HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("[IdempotencyKey] IS NOT NULL");
-        b.Entity<PurchaseInvoice>().HasIndex(x => x.GoodsReceiptId).IsUnique().HasFilter("[GoodsReceiptId] IS NOT NULL");
-        b.Entity<SalesInvoice>().HasIndex(x => x.DeliveryId).IsUnique().HasFilter("[DeliveryId] IS NOT NULL");
+        
+        // Duplicate-posting guards (PostgreSQL filtered unique indexes)
+b.Entity<JournalEntry>().HasIndex(x => x.ReferenceKey)
+    .IsUnique().HasFilter("\"ReferenceKey\" IS NOT NULL");
+
+b.Entity<Payment>().HasIndex(x => x.IdempotencyKey)
+    .IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+b.Entity<PurchaseInvoice>().HasIndex(x => x.GoodsReceiptId)
+    .IsUnique().HasFilter("\"GoodsReceiptId\" IS NOT NULL");
+
+b.Entity<SalesInvoice>().HasIndex(x => x.DeliveryId)
+    .IsUnique().HasFilter("\"DeliveryId\" IS NOT NULL");
 
         foreach (var t in b.Model.GetEntityTypes().ToList())
         {
@@ -99,11 +107,10 @@ public class ErpDbContext(DbContextOptions<ErpDbContext> options, ICurrentUser c
                 b.Entity(clr).HasIndex("Number").IsUnique();
                 b.Entity(clr).HasIndex("Status");
                 b.Entity(clr).HasIndex("Date");
-                if (Database.IsSqlServer()) b.Entity(clr).Property("RowVersion").IsRowVersion();
+                b.Entity(clr).Property<uint>("RowVersion").IsRowVersion();
             }
         }
-        if (Database.IsSqlServer()) b.Entity<DocumentSequence>().Property(x => x.RowVersion).IsRowVersion();
-
+        b.Entity<DocumentSequence>().Property(x => x.RowVersion).IsRowVersion();
         foreach (var fk in b.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
         {
             var child = fk.DeclaringEntityType.ClrType; var parent = fk.PrincipalEntityType.ClrType;

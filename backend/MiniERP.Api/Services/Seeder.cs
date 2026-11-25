@@ -38,19 +38,29 @@ public static class Seeder
     }
 
     public static async Task SeedDemo(IServiceProvider sp, string? defaultPassword)
+{
+    var db = sp.GetRequiredService<ErpDbContext>();
+
+    if (string.IsNullOrWhiteSpace(defaultPassword))
+        throw new InvalidOperationException(
+            "Seed:DefaultPassword must be configured when creating the initial Admin account.");
+
+    if (!await db.Users.IgnoreQueryFilters().AnyAsync())
     {
-        var db = sp.GetRequiredService<ErpDbContext>();
-        var log = sp.GetRequiredService<ILogger<Program>>();
-        if (!string.IsNullOrWhiteSpace(defaultPassword) && !await db.Users.IgnoreQueryFilters().AnyAsync())
+        var adminRole = await db.Roles.SingleAsync(r => r.Name == "Admin");
+
+        db.Users.Add(new User
         {
-            var adminRole = await db.Roles.SingleAsync(r => r.Name == "Admin");
-            db.Users.Add(new User { Username = "admin", FullName = "Shop Administrator", Email = "admin@retail.local", RoleId = adminRole.Id, PasswordHash = PasswordHasher.Hash(defaultPassword) });
-            await db.SaveChangesAsync();
-        }
-        if (await db.Products.IgnoreQueryFilters().AnyAsync()) return;
-        try { await SeedRetailData(sp); }
-        catch (Exception ex) { log.LogError(ex, "Retail starter data seeding failed. Check the database log before retrying."); }
+            Username = "admin",
+            FullName = "Shop Administrator",
+            Email = "admin@retail.local",
+            RoleId = adminRole.Id,
+            PasswordHash = PasswordHasher.Hash(defaultPassword)
+        });
+
+        await db.SaveChangesAsync();
     }
+}
 
     static async Task SeedRetailData(IServiceProvider sp)
     {
